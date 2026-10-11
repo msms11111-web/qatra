@@ -231,8 +231,8 @@ def meta_block(
         # يُطبَّق الاختيار المحفوظ قبل أول رسم، وإلا ومضت الصفحة بيضاء ثم أظلمت
         f"<script>try{{var t=localStorage.getItem('qatra-theme');"
         f"if(t)document.documentElement.dataset.theme=t}}catch(e){{}}</script>"
-        f'<meta name="theme-color" content="#f7f1e7" media="(prefers-color-scheme: light)">'
-        f'<meta name="theme-color" content="#14110d" media="(prefers-color-scheme: dark)">'
+        f'<meta name="theme-color" content="#f3f0e8" media="(prefers-color-scheme: light)">'
+        f'<meta name="theme-color" content="#0e1830" media="(prefers-color-scheme: dark)">'
         f'<link rel="canonical" href="{url}">'
         f'<meta property="og:url" content="{url}">'
         f'<meta property="og:site_name" content="قطرة">'

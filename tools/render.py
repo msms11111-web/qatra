@@ -49,7 +49,7 @@ def hero_html(data: dict) -> str:
         up = up_from(data["path"])
         status = (
             f'<a class="status {data["status"]["kind"]} status-link" '
-            f'href="{up}methodology/#states" style="margin-top:24px" '
+            f'href="{up}methodology/#states" '
             f'title="ما معنى حالات التوثيق؟">{data["status"]["label"]}</a>'
         )
 

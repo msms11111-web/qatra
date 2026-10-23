@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # العناصر التي لا تدخل الفهرس: التنقل المتكرر في كل صفحة
 SKIP_TAGS = {"script", "style", "noscript"}
-SKIP_CLASSES = {"crumbs", "side", "skip", "revnote", "related", "log"}
+SKIP_CLASSES = {"crumbs", "side", "skip", "revnote", "related", "log", "catalog", "spec-kicker"}
 
 
 class PageText(HTMLParser):

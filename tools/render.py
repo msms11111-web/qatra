@@ -53,12 +53,61 @@ def hero_html(data: dict) -> str:
             f'title="ما معنى حالات التوثيق؟">{data["status"]["label"]}</a>'
         )
 
+    wing = wing_of(data["path"])
+    kicker = f'<span class="spec-kicker">مدخل في جناح {wing[1]}</span>' if wing else ""
+
     return (
         '<section class="page-hero"><div class="container">'
-        f'<div class="crumbs">{crumbs}</div>{status}'
+        f'<div class="crumbs">{crumbs}</div>{status}{kicker}'
         f'<h1>{data["title"]}</h1><p>{data["lead"]}</p>'
+        f"{catalog_html(data, wing)}"
         "</div></section>"
     )
+
+
+def wing_of(path: str):
+    """الجناح الذي تنتمي إليه الصفحة، بقائمة wings.py نفسها لا بنسخةٍ منها."""
+    from wings import WINGS  # noqa: E402
+
+    page = path.strip("/") + "/"
+    for entry in WINGS:
+        if any(page.startswith(p.strip("/") + "/") or page.strip("/") == p.strip("/") for p in entry[3]):
+            return entry
+    return None
+
+
+REFS = re.compile(r'<ul class="refs">(.*?)</ul>', re.S)
+LEADS = re.compile(r'<ul class="refs leads">(.*?)</ul>', re.S)
+
+
+def count_items(pattern: re.Pattern, html: str) -> int:
+    return sum(block.count("<li") for block in pattern.findall(html))
+
+
+def catalog_html(data: dict, wing) -> str:
+    """بطاقة فهرسة العيّنة. كل قيمة فيها محسوبة من المحتوى، فلا تكذب عند التعديل:
+    عدد المقاطع من الأقسام، والمصادر من قوائم refs، والخيوط من refs leads،
+    والمرتبطات من relations.py."""
+    from relations import RELATIONS  # noqa: E402
+
+    body = "".join(s["body"] for s in data["sections"])
+    sources = count_items(REFS, body)
+    leads = count_items(LEADS, body)
+    related = len(RELATIONS.get(data["path"].strip("/") + "/", []))
+    up = up_from(data["path"])
+
+    rows = []
+    if wing:
+        rows.append(("الجناح", f'<a href="{up}{wing[0]}">{wing[1]}</a>'))
+    rows.append(("المقاطع", str(len(data["sections"]))))
+    if sources:
+        rows.append(("المصادر", str(sources)))
+    if leads:
+        rows.append(("خيوط بحث", f"{leads} <small>لا تُعدّ أدلة</small>"))
+    if related:
+        rows.append(("مداخل مرتبطة", str(related)))
+    cells = "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in rows)
+    return f'<dl class="catalog">{cells}</dl>'
 
 
 def article_html(data: dict) -> str:

@@ -628,4 +628,200 @@
   document.querySelectorAll("[data-year]").forEach((x) => {
     x.textContent = new Date().getFullYear();
   });
+
+  /* مقاطع المدخل: ترقيم صريح، ومستويات قراءة، وموضع القارئ.
+     كل ذلك يُضاف هنا لا في HTML المبني، فمن لا يشغّل السكربت يرى المدخل كاملًا
+     مرقّمًا بعدّادات CSS، ويبقى استخراج extract.py دورةً مغلقة. */
+  const article = document.querySelector(".layout > .article");
+  const layout = article && article.parentElement;
+  const side = layout && layout.querySelector(".side");
+  const heads = article ? [...article.children].filter((el) => el.tagName === "H2" && el.id) : [];
+  if (heads.length > 1) {
+    const two = (n) => String(n).padStart(2, "0");
+    // «المصادر» و«خيوط بحث» تُطوى في مستوى المتن؛ و«التصحيح» لا يُطوى أبدًا
+    const SRC = new Set(["sources", "leads"]);
+    const NEVER_FOLD = new Set(["corrected"]);
+    const sideLink = (id) => side && side.querySelector(`a[href="#${CSS.escape(id)}"]`);
+    const secs = heads.map((h, i) => ({
+      h,
+      id: h.id,
+      n: two(i + 1),
+      name: (sideLink(h.id) || h).textContent.trim(),
+      src: SRC.has(h.id),
+      fold: i > 0 && !NEVER_FOLD.has(h.id),
+    }));
+
+    // كل عنصر بين عنوانين يحمل علامات مقطعه، وتُخفيه قاعدة CSS بحسب المستوى
+    let cur = null;
+    for (const el of [...article.children]) {
+      if (el.tagName === "H2" && el.id) cur = secs.find((s) => s.h === el);
+      if (!cur || el.classList.contains("revnote")) continue;
+      if (cur.src) el.dataset.src = "";
+      if (cur.fold) el.dataset.fold = "";
+    }
+    secs.forEach((s) => {
+      s.h.dataset.n = s.n;
+      const a = sideLink(s.id);
+      if (!a) return;
+      a.dataset.n = s.n;
+      if (s.src) a.dataset.src = "";
+      if (s.fold) a.dataset.fold = "";
+    });
+
+    const nSrc = secs.filter((s) => s.src).length;
+    const nFold = secs.filter((s) => s.fold).length;
+    const LEVELS = [
+      ["brief", "الخلاصة", "المقطع الأول وحده، ومعه أي تصحيح منشور. الباقي مطويّ ظاهرٌ عددُه."],
+      ["text", "المتن", "المقاطع كلها، وقائمة المصادر مطويّة."],
+      ["full", "المتن والمصادر", "المدخل كاملًا كما نُشر."],
+    ].filter(([k]) => k !== "text" || nSrc);
+
+    const read = () => {
+      try {
+        return localStorage.getItem("qatra-depth");
+      } catch (e) {
+        return null;
+      }
+    };
+    const group = document.createElement("div");
+    group.className = "depth";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", "مستوى القراءة");
+    const note = document.createElement("p");
+    note.className = "depth-note";
+    group.innerHTML = LEVELS.map(([k, label]) => `<button type="button" data-level="${k}">${label}</button>`).join("");
+    article.prepend(group, note);
+
+    // تنبيه في موضع ما طُوي: الطيّ لا يكون صامتًا
+    const folded = (key, text, label, to) => {
+      const box = document.createElement("div");
+      box.className = "folded";
+      box.dataset.for = key;
+      box.innerHTML = `<p>${text}</p><button type="button">${label}</button>`;
+      box.querySelector("button").addEventListener("click", () => set(to, true));
+      return box;
+    };
+    const briefBox = folded(
+      "brief",
+      (nFold === 1 ? "طُوي مقطعٌ واحد" : nFold === 2 ? "طُوي مقطعان" : `طُويت ${nFold} ${nFold <= 10 ? "مقاطع" : "مقطعًا"}`) +
+        "، وقد يكون فيها من الحدود والتحفّظات ما لا تُظهره الخلاصة.",
+      "تابع القراءة",
+      nSrc ? "text" : "full"
+    );
+    const firstFold = secs.find((s) => s.fold);
+    if (firstFold) article.insertBefore(briefBox, firstFold.h);
+    const srcSec = secs.find((s) => s.src);
+    const srcBox = srcSec ? folded("text", "قائمة المصادر مطويّة، وهي في آخر المدخل.", "اعرض المصادر", "full") : null;
+    if (srcBox) article.insertBefore(srcBox, srcSec.h);
+
+    let level;
+    function set(next, focus) {
+      level = LEVELS.some(([k]) => k === next) ? next : "full";
+      layout.dataset.depth = level;
+      group.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.level === level)));
+      note.textContent = LEVELS.find(([k]) => k === level)[2];
+      briefBox.hidden = level !== "brief" || !nFold;
+      if (srcBox) srcBox.hidden = level !== "text";
+      try {
+        localStorage.setItem("qatra-depth", level);
+      } catch (e) {}
+      if (focus) group.querySelector(`[data-level="${level}"]`).focus();
+      spy && spy.refresh();
+    }
+    group.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (b) set(b.dataset.level);
+    });
+
+    // رابطٌ إلى مقطعٍ مطويّ يفتح المدخل كاملًا قبل الانتقال
+    const reveal = () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      const s = id && secs.find((x) => x.id === id);
+      if (s && ((level === "brief" && s.fold) || (level === "text" && s.src))) {
+        set("full");
+        s.h.scrollIntoView();
+      }
+    };
+
+    // موضع القارئ: العنوان الأخير الذي تجاوز ثلث الشاشة
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "secpill";
+    pill.setAttribute("aria-haspopup", "dialog");
+    pill.innerHTML = '<span></span><small></small>';
+    const sheet = document.createElement("div");
+    sheet.className = "secsheet";
+    sheet.hidden = true;
+    sheet.innerHTML =
+      '<div class="panel" role="dialog" aria-modal="true" aria-labelledby="secsheet-h">' +
+      '<div class="bar"><h2 id="secsheet-h">مقاطع المدخل</h2>' +
+      '<button type="button" class="close" aria-label="إغلاق">×</button></div><ol></ol></div>';
+    document.body.append(pill, sheet);
+
+    const visible = () => secs.filter((s) => s.h.offsetParent !== null);
+    let current = secs[0];
+    const paint = () => {
+      const vis = visible();
+      pill.querySelector("span").textContent = current.name;
+      pill.querySelector("small").textContent = `${vis.indexOf(current) + 1} من ${vis.length}`;
+      pill.setAttribute("aria-label", `المقطع الحالي: ${current.name}. افتح قائمة المقاطع`);
+      secs.forEach((s) => {
+        const a = sideLink(s.id);
+        if (a) a.toggleAttribute("aria-current", s === current);
+      });
+    };
+    const spy = {
+      refresh() {
+        const line = innerHeight / 3;
+        const vis = visible();
+        current = vis.filter((s) => s.h.getBoundingClientRect().top <= line).pop() || vis[0] || secs[0];
+        const r = article.getBoundingClientRect();
+        pill.hidden = r.top > innerHeight * 0.6 || r.bottom < innerHeight * 0.4;
+        paint();
+      },
+    };
+    let ticking = false;
+    addEventListener(
+      "scroll",
+      () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          ticking = false;
+          spy.refresh();
+        });
+      },
+      { passive: true }
+    );
+    addEventListener("resize", () => spy.refresh());
+
+    const list = sheet.querySelector("ol");
+    const closeSheet = () => {
+      sheet.hidden = true;
+      pill.focus();
+    };
+    pill.addEventListener("click", () => {
+      list.innerHTML = visible()
+        .map(
+          (s) =>
+            `<li><a href="#${s.id}"${s === current ? ' aria-current="true"' : ""}>` +
+            `<span class="n" aria-hidden="true">${s.n}</span><span>${s.name}</span></a></li>`
+        )
+        .join("");
+      sheet.hidden = false;
+      sheet.querySelector(".close").focus();
+    });
+    sheet.querySelector(".close").addEventListener("click", closeSheet);
+    sheet.addEventListener("click", (e) => {
+      if (e.target === sheet) closeSheet();
+      if (e.target.closest("a")) sheet.hidden = true;
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !sheet.hidden) closeSheet();
+    });
+
+    set(read() || "full");
+    reveal();
+    addEventListener("hashchange", reveal);
+  }
 })();

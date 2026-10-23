@@ -106,6 +106,71 @@ footer{background:var(--cabinet)}
 }
 @media(prefers-reduced-motion:reduce){.page-hero .status-link{animation:none}}
 
+/* بطاقة فهرسة المدخل: قيمٌ محسوبة في render.py، لا تُكتب باليد */
+.spec-kicker{display:block;margin-top:26px;color:var(--cabinet-muted);font-size:13px;letter-spacing:.01em}
+.spec-kicker + h1{margin-top:6px}
+.catalog{display:flex;flex-wrap:wrap;margin:22px 0 0;padding:0;border-top:1px solid rgba(255,255,255,.18);max-width:820px}
+.catalog div{display:flex;flex-direction:column;gap:2px;padding:12px 18px 2px 0;margin-inline-end:18px;border-inline-start:1px solid rgba(255,255,255,.18)}
+.catalog div:first-child{padding-right:0;border-inline-start:0}
+.catalog dt{color:var(--cabinet-muted);font-size:12.5px}
+.catalog dd{margin:0;color:var(--cabinet-ink);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.catalog dd small{font-weight:400;font-size:12px;color:var(--cabinet-muted)}
+.catalog a{color:var(--label);text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px}
+.catalog a:hover{text-decoration-thickness:2px}
+@media(max-width:700px){.catalog div{padding-right:12px;margin-inline-end:12px}.catalog dd{font-size:16px}}
+
+/* ترقيم المقاطع: ترتيبها معلومة حقيقية. يُرقَّم بعدّادات CSS فلا يتغيّر HTML
+   المبني، ويبقى استخراج extract.py دورةً مغلقة. */
+.article{counter-reset:sec}
+.article>h2{counter-increment:sec}
+.article>h2:before{content:counter(sec,decimal-leading-zero);content:counter(sec,decimal-leading-zero) / "";
+  display:inline-block;margin-left:12px;vertical-align:.35em;font:500 14px/1 var(--sans);color:var(--gold-ink);font-variant-numeric:tabular-nums}
+.side{counter-reset:nav;border-radius:var(--r);background:none;border:0;border-inline-start:2px solid var(--line);padding:4px 0}
+.side strong{font-size:13px;color:var(--muted);font-weight:600;padding-right:16px}
+.side a{counter-increment:nav;display:flex;gap:10px;padding:7px 16px 7px 0;margin-right:-2px;border-right:2px solid transparent;text-decoration:none}
+.side a:before{content:counter(nav,decimal-leading-zero);content:counter(nav,decimal-leading-zero) / "";font-size:12px;padding-top:2px;font-variant-numeric:tabular-nums}
+.side a:hover{color:var(--ink)}
+.side a[aria-current]{color:var(--ink);font-weight:600;border-right-color:var(--verm)}
+/* حين يعمل السكربت يكتب الرقم صريحًا، فلا يتغيّر رقم مقطعٍ إذا طُوي ما قبله */
+.article>h2[data-n]:before,.side a[data-n]:before{content:attr(data-n);content:attr(data-n) / ""}
+
+/* مستويات القراءة: تُضاف بالجافاسكربت، فمن لا يشغّلها يرى المدخل كاملًا */
+.depth{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:2px solid var(--ink);margin:0 0 6px;max-width:560px}
+.depth button{min-height:46px;border:0;border-inline-start:1px solid var(--ink);background:none;color:var(--ink);font:inherit;font-size:14.5px;cursor:pointer;padding:4px 6px}
+.depth button:first-child{border-inline-start:0}
+.depth button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:600}
+.depth-note{margin:0 0 30px;color:var(--muted);font-size:13.5px}
+.depth-note + h2{margin-top:0}
+.layout[data-depth="text"] [data-src],.layout[data-depth="brief"] [data-fold]{display:none}
+.folded{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:26px 0 0;padding:14px 16px;border:1px dashed var(--ink);background:var(--card)}
+.folded p{margin:0;flex:1 1 260px;font-size:15px;color:var(--body-ink)}
+.folded button{min-height:44px;padding:0 16px;border:2px solid var(--ink);background:none;color:var(--ink);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer}
+.folded button:hover{background:var(--ink);color:var(--paper)}
+.folded[hidden]{display:none}
+
+/* فهرس المقاطع على الهاتف: زرّ عائم يدلّ على الموضع ويفتح القائمة */
+.secpill,.secsheet{display:none}
+@media(max-width:980px){
+  .secpill{position:fixed;z-index:90;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);min-height:46px;padding:0 18px;border:2px solid var(--ink);
+    background:var(--paper);color:var(--ink);font:inherit;font-size:14.5px;box-shadow:0 3px 0 var(--ink);cursor:pointer}
+  .secpill[hidden]{display:none}
+  .secpill span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .secpill small{flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+  .secsheet{position:fixed;inset:0;z-index:130;display:flex;align-items:flex-end;background:rgba(7,15,34,.55)}
+  .secsheet[hidden]{display:none}
+  .secsheet .panel{width:100%;max-height:78vh;overflow:auto;background:var(--paper);border-top:3px solid var(--ink);border-radius:0;
+    padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px))}
+  .secsheet .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .secsheet h2{font:700 24px/1.4 var(--display);margin:0}
+  .secsheet .close{width:44px;height:44px;border:1px solid var(--ink);background:none;color:var(--ink);font-size:20px;cursor:pointer}
+  .secsheet ol{list-style:none;margin:0;padding:0}
+  .secsheet a{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:17px}
+  .secsheet a .n{color:var(--gold-ink);font-size:12px;padding-top:6px;font-variant-numeric:tabular-nums}
+  .secsheet a[aria-current]{font-weight:600}
+  main{padding-bottom:72px}
+}
+
 /* ─── الوضع الليلي ───────────────────────────────────────────────────────
    الأقسام الداكنة أصلًا (البطل، المقدّمة، المميّز، التذييل) تبقى كما هي؛
    المقلوب هو الأسطح الفاتحة وحدها. القيم مختارة بحساب التباين لا بالعكس

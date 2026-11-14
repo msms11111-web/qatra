@@ -291,6 +291,63 @@ def raise_sections():
 
 raise_sections()
 
+
+# ٦) الصورُ في المتن: بديلٌ عربيّ، وأبعادٌ، وعزوٌ وترخيصٌ مكتوبان قبلها.
+#
+# الصورُ الفوتوغرافية يملكها صاحبُ المشروع، وتدخل الموسوعةَ بحقوقها. فلا تُقبل
+# صورةٌ في content/*.json إلا بثلاثة:
+#   ‏alt عربيّ      — القارئُ الآليُّ ينطق البديل، والصفحةُ عربية؛ والبديلُ الفارغ أو
+#                     اللاتينيُّ يترك الكفيفَ بلا صورةٍ ولا وصف.
+#   ‏width وheight  — رقمان، يحفظان مكانَ الصورة قبل تحميلها فلا تقفز الصفحة.
+#   تعليقُ عزوٍ وترخيص — قبل الوسم مباشرةً، بهذه الصيغة:
+#                     <!-- عزو: اسمُ المصوِّر أو الجهة | ترخيص: اسمُ الترخيص أو الإذن -->
+#                     فلا تُنشر صورةٌ لا يُعرف صاحبُها ولا بأيّ حقٍّ نُشرت.
+# والمثالان في tools/fixtures/ يُفحصان مع كل بناء: الناجحُ يجب أن يمرّ، والفاشلُ يجب
+# أن يُرفض بأسبابه كلِّها — كي لا يتعطّل الفحصُ صامتًا.
+IMG = re.compile(r"<img\b[^>]*>", re.I)
+ARABIC = re.compile(r"[\u0621-\u064a]")
+CREDIT = re.compile(r"<!--(?P<c>(?:(?!-->).)*)-->\s*$", re.S)
+
+
+def image_rules(files) -> list[tuple[str, str, str]]:
+    import json
+
+    out = []
+    for f in files:
+        doc = json.loads(f.read_text(encoding="utf-8"))
+        for s in doc.get("sections", []):
+            body = s.get("body", "")
+            for m in IMG.finditer(body):
+                tag, where = m.group(0), f"{f.name} → {s['id']}"
+                src = re.search(r'\bsrc="([^"]*)"', tag)
+                name = (src.group(1).rsplit("/", 1)[-1] if src else tag)[:50]
+                alt = re.search(r'\balt="([^"]*)"', tag)
+                if alt is None or not alt.group(1).strip():
+                    out.append(("صورةٌ بلا alt", where, name))
+                elif not ARABIC.search(alt.group(1)):
+                    out.append(("صورةٌ بديلُها غيرُ عربيّ", where, f"{name}: «{alt.group(1)[:40]}»"))
+                if not (re.search(r'\bwidth="\d+"', tag) and re.search(r'\bheight="\d+"', tag)):
+                    out.append(("صورةٌ بلا أبعاد", where, name))
+                c = CREDIT.search(body[: m.start()])
+                text = c.group("c") if c else ""
+                if not (re.search(r"عزو\s*:\s*[^\s|]", text) and re.search(r"ترخيص\s*:\s*[^\s|]", text)):
+                    out.append(("صورةٌ بلا عزوٍ وترخيص", where, name))
+    return out
+
+
+for kind, where, msg in image_rules(sorted((ROOT / "content").glob("*.json"))):
+    note(kind, where, msg)
+
+# المثالان: الناجحُ بلا ملاحظة، والفاشلُ بالأسباب الأربعة كلِّها
+_fx = ROOT / "tools" / "fixtures"
+_ok = image_rules([_fx / "img-ok.json"])
+_bad = Counter(k for k, _, _ in image_rules([_fx / "img-bad.json"]))
+_want = {"صورةٌ بلا alt": 1, "صورةٌ بديلُها غيرُ عربيّ": 1, "صورةٌ بلا أبعاد": 1, "صورةٌ بلا عزوٍ وترخيص": 2}
+if _ok:
+    note("فحصُ الصور معطَّل", "tools/fixtures/img-ok.json", f"المثالُ الناجح رُفض: {_ok[0][0]}")
+if dict(_bad) != _want:
+    note("فحصُ الصور معطَّل", "tools/fixtures/img-bad.json", f"المتوقَّع {_want}، والحاصل {dict(_bad)}")
+
 print(f"فُحصت {len(list(ROOT.rglob('*.html')))} صفحة.\n")
 for line in detail:
     print(line)

@@ -1,0 +1,26 @@
+{
+ "slug": "fixture--img-bad",
+ "title": "مثالٌ فاشل: أربعُ صورٍ، كلٌّ تُخلّ بشرط",
+ "sections": [
+  {
+   "id": "no-alt",
+   "heading": "بلا alt",
+   "body": "<figure class=\"fig\"><!-- عزو: مصوِّرٌ مسمًّى | ترخيص: CC BY 4.0 --><img src=\"../../assets/uploads/a.jpg\" width=\"1600\" height=\"1067\"></figure>"
+  },
+  {
+   "id": "latin-alt",
+   "heading": "بديلٌ لاتينيّ",
+   "body": "<figure class=\"fig\"><!-- عزو: مصوِّرٌ مسمًّى | ترخيص: CC BY 4.0 --><img src=\"../../assets/uploads/b.jpg\" alt=\"Coffee terraces in Jazan\" width=\"1600\" height=\"1067\"></figure>"
+  },
+  {
+   "id": "no-size",
+   "heading": "بلا أبعاد",
+   "body": "<figure class=\"fig\"><!-- عزو: مصوِّرٌ مسمًّى | ترخيص: CC BY 4.0 --><img src=\"../../assets/uploads/c.jpg\" alt=\"كرزُ بنٍّ ناضجٌ على الغصن\" width=\"1600\"></figure>"
+  },
+  {
+   "id": "no-credit",
+   "heading": "بلا عزوٍ وترخيص: مرّةً بلا تعليق، ومرّةً بتعليقٍ ينقصه الترخيص",
+   "body": "<figure class=\"fig\"><img src=\"../../assets/uploads/d.jpg\" alt=\"حبٌّ أخضرُ على طاولة تجفيف\" width=\"1600\" height=\"1067\"></figure><figure class=\"fig\"><!-- عزو: مصوِّرٌ مسمًّى --><img src=\"../../assets/uploads/e.jpg\" alt=\"دلّةٌ وفناجينُ على صينية\" width=\"1600\" height=\"1067\"></figure>"
+  }
+ ]
+}

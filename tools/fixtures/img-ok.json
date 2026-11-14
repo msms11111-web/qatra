@@ -1,0 +1,11 @@
+{
+ "slug": "fixture--img-ok",
+ "title": "مثالٌ ناجح لصورةٍ في المتن",
+ "sections": [
+  {
+   "id": "photo",
+   "heading": "صورةٌ تستوفي الشروط الثلاثة",
+   "body": "<figure class=\"fig\"><!-- عزو: تصوير صاحب المشروع، جازان 2026 | ترخيص: جميع الحقوق محفوظة، منشورةٌ بإذنه --><img src=\"../../assets/uploads/khawlani-terraces.jpg\" alt=\"مدرّجاتُ بنٍّ خولانيٍّ على سفح جبلٍ في جازان، والشجرُ في صفوفٍ تحت الظلّ\" width=\"1600\" height=\"1067\" loading=\"lazy\"><figcaption>مدرّجاتُ البنّ في جازان. تصوير: صاحب المشروع، 2026.</figcaption></figure>"
+  }
+ ]
+}

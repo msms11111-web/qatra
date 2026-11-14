@@ -302,11 +302,22 @@ raise_sections()
 #   تعليقُ عزوٍ وترخيص — قبل الوسم مباشرةً، بهذه الصيغة:
 #                     <!-- عزو: اسمُ المصوِّر أو الجهة | ترخيص: اسمُ الترخيص أو الإذن -->
 #                     فلا تُنشر صورةٌ لا يُعرف صاحبُها ولا بأيّ حقٍّ نُشرت.
+#   عزوٌ ظاهر      — التعليقُ لا يراه القارئ. فتكون الصورةُ داخل <figure>، وبعدها
+#                     <figcaption> فيه «تصوير: الاسم» أو «المصدر: الاسم»؛ والاسمُ نفسُه
+#                     واردٌ في تعليق العزو — كي لا يُنسب في الظاهر إلى غير مَن في التعليق.
 # والمثالان في tools/fixtures/ يُفحصان مع كل بناء: الناجحُ يجب أن يمرّ، والفاشلُ يجب
 # أن يُرفض بأسبابه كلِّها — كي لا يتعطّل الفحصُ صامتًا.
 IMG = re.compile(r"<img\b[^>]*>", re.I)
 ARABIC = re.compile(r"[\u0621-\u064a]")
 CREDIT = re.compile(r"<!--(?P<c>(?:(?!-->).)*)-->\s*$", re.S)
+# «تصوير: …» أو «المصدر: …» في النصّ الظاهر، والاسمُ إلى أول فاصلةٍ أو نقطة
+SHOWN = re.compile(r"(?:تصوير|المصدر)\s*:\s*([^،.؛|—\n]+)")
+MARKS = re.compile(r"[\u064b-\u0652\u0670\u0640]")  # التشكيلُ والتطويل
+
+
+def bare(s: str) -> str:
+    """نصٌّ بلا وسومٍ ولا تشكيل، للمقابلة بين الاسم في التعليق والاسم في الظاهر."""
+    return re.sub(r"\s+", " ", MARKS.sub("", re.sub(r"<[^>]+>", " ", s))).strip()
 
 
 def image_rules(files) -> list[tuple[str, str, str]]:
@@ -332,17 +343,31 @@ def image_rules(files) -> list[tuple[str, str, str]]:
                 text = c.group("c") if c else ""
                 if not (re.search(r"عزو\s*:\s*[^\s|]", text) and re.search(r"ترخيص\s*:\s*[^\s|]", text)):
                     out.append(("صورةٌ بلا عزوٍ وترخيص", where, name))
+                # العزوُ الظاهر: <figcaption> بعد الصورة في <figure> نفسِها
+                opened = body.rfind("<figure", 0, m.start())
+                inside = opened >= 0 and "</figure>" not in body[opened : m.start()]
+                close = body.find("</figure>", m.end())
+                cap = re.search(r"<figcaption\b[^>]*>(.*?)</figcaption>", body[m.end() : close], re.S) if inside and close >= 0 else None
+                shown = SHOWN.search(bare(cap.group(1))) if cap else None
+                if not shown:
+                    out.append(("صورةٌ بلا عزوٍ ظاهر", where, name))
+                else:
+                    who = shown.group(1).strip()
+                    said = re.search(r"عزو\s*:\s*([^|]+)", bare(text))
+                    if said and who not in said.group(1):
+                        out.append(("عزوٌ ظاهرٌ يخالف التعليق", where, f"{name}: «{who}»"))
     return out
 
 
 for kind, where, msg in image_rules(sorted((ROOT / "content").glob("*.json"))):
     note(kind, where, msg)
 
-# المثالان: الناجحُ بلا ملاحظة، والفاشلُ بالأسباب الأربعة كلِّها
+# المثالان: الناجحُ بلا ملاحظة، والفاشلُ بأسبابه الستّة كلِّها
 _fx = ROOT / "tools" / "fixtures"
 _ok = image_rules([_fx / "img-ok.json"])
 _bad = Counter(k for k, _, _ in image_rules([_fx / "img-bad.json"]))
-_want = {"صورةٌ بلا alt": 1, "صورةٌ بديلُها غيرُ عربيّ": 1, "صورةٌ بلا أبعاد": 1, "صورةٌ بلا عزوٍ وترخيص": 2}
+_want = {"صورةٌ بلا alt": 1, "صورةٌ بديلُها غيرُ عربيّ": 1, "صورةٌ بلا أبعاد": 1, "صورةٌ بلا عزوٍ وترخيص": 2,
+         "صورةٌ بلا عزوٍ ظاهر": 2, "عزوٌ ظاهرٌ يخالف التعليق": 1}
 if _ok:
     note("فحصُ الصور معطَّل", "tools/fixtures/img-ok.json", f"المثالُ الناجح رُفض: {_ok[0][0]}")
 if dict(_bad) != _want:
